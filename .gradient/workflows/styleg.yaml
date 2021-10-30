@@ -1,0 +1,40 @@
+on:
+  github:
+    branches:
+      only: main
+
+jobs:
+  CloneRepo:
+    resources:
+      instance-type: C3
+    outputs:
+     stylegan2:
+        type: volume
+    uses: git-checkout@v1
+    with:
+      # url: https://github.com/gradient-ai/stylegan2.git
+      url: context.event.github.url
+      ref: context.event.github.ref
+  StyleGan2:
+    resources:
+      instance-type: P4000
+    needs:
+      - CloneRepo
+    inputs:
+      stylegan2: CloneRepo.outputs.stylegan2
+    outputs:
+      generatedFaces:
+        type: dataset
+        with:
+          ref: demo-dataset
+    uses: script@v1
+    with:
+      script: |-
+        curl -fsSL https://code-server.dev/install.sh | sh -s -- --dry-run
+        curl -fsSL https://code-server.dev/install.sh | sh
+        timeout 2s code-server
+        cd ~/.config/code-server
+        cat config.yaml
+        npm install -g localtunnel
+        code-server --bind-addr 127.0.0.1:8040  & lt --port 8040
+      image: tensorflow/tensorflow:1.14.0-gpu-py3
